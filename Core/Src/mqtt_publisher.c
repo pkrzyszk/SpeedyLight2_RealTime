@@ -18,7 +18,7 @@
 // MQTT connection callback
 void mqtt_connection_cb(mqtt_client_t *client, void *arg, mqtt_connection_status_t status) {
     if (status == MQTT_CONNECT_ACCEPTED) {
-        printf("MQTT connected!\n");
+        printf("MQTT connection accepted!\n");
 
         const char *topic = "test/topic";
         const char *message = "Hello from FreeRTOS!";
@@ -33,19 +33,24 @@ void vMQTTTask(void *pvParameters)
 {
 	printf("Started vMQTTTask task\n");
 	osDelay(20000);
+	printf("################### connecting MQTT ####################\n");
     mqtt_client_t *client = mqtt_client_new();
     if (!client) {
         printf("Failed to create MQTT client\n");
         vTaskDelete(NULL);
         return;
     }
+    else
+    {
+    	printf("MQTT client created\n");
+    }
 
     ip_addr_t broker_ip;
-    IP4_ADDR(&broker_ip, 192, 168, 1, 100); // Replace with your broker IP
+    IP4_ADDR(&broker_ip, 192, 168, 101, 20); // Replace with your broker IP
     struct mqtt_connect_client_info_t ci = {
         .client_id = "stm32_freertos_client",
-        .client_user = NULL,
-        .client_pass = NULL,
+        .client_user = "user",
+        .client_pass = "password",
         .keep_alive = 60,
         .will_topic = NULL,
         .will_msg = NULL,
@@ -60,10 +65,26 @@ void vMQTTTask(void *pvParameters)
         vTaskDelete(NULL);
         return;
     }
+    else
+    {
+    	printf("MQTT connection request send\n");
+    }
 
     // Task can optionally wait here or do other work
     while (1) {
-        vTaskDelay(pdMS_TO_TICKS(1000)); // Delay to simulate periodic work
+        vTaskDelay(pdMS_TO_TICKS(10000)); // Delay to simulate periodic work
+
+       /* err_t err = mqtt_client_connect(client, &broker_ip, MQTT_PORT, mqtt_connection_cb, NULL, &ci);
+            if (err != ERR_OK) {
+                printf("MQTT connect failed: %d\n", err);
+                mqtt_client_free(client);
+                vTaskDelete(NULL);
+                return;
+            }
+            else
+            {
+            	printf("MQTT connection request send\n");
+            }*/
     }
 }
 
