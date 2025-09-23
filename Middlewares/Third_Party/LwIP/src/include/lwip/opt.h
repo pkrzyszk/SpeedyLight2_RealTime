@@ -3369,7 +3369,7 @@
  * TCP_DEBUG: Enable debugging for TCP.
  */
 #if !defined TCP_DEBUG || defined __DOXYGEN__
-#define TCP_DEBUG                       LWIP_DBG_OFF
+#define TCP_DEBUG                       LWIP_DBG_ON
 #endif
 
 /**
@@ -3440,7 +3440,7 @@
  * TCPIP_DEBUG: Enable debugging in tcpip.c.
  */
 #if !defined TCPIP_DEBUG || defined __DOXYGEN__
-#define TCPIP_DEBUG                     LWIP_DBG_OFF
+#define TCPIP_DEBUG                     LWIP_DBG_ON
 #endif
 
 /**
