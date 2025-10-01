@@ -17,6 +17,7 @@
 #include "stdbool.h"
 
 static bool mqttConnected = false;
+static bool mqttSubscribed = false;
 
 // MQTT connection callback
 void mqtt_connection_cb(mqtt_client_t *client, void *arg, mqtt_connection_status_t status) {
@@ -24,11 +25,46 @@ void mqtt_connection_cb(mqtt_client_t *client, void *arg, mqtt_connection_status
         printf("MQTT connection accepted!\n");
         mqttConnected = true;
 
+
     } else {
         printf("!@#$   MQTT connection failed: %d   !@#$\n", status);
         mqttConnected = false;
+        mqttSubscribed = false;
     }
 }
+
+
+// Called when a new publish message starts arriving
+void mqtt_incoming_publish_cb(void *arg, const char *topic, u32_t tot_len)
+{
+    printf("Incoming message on topic: %s, total length: %lu\n", topic, (unsigned long)tot_len);
+}
+
+// Called for each fragment of the payload
+void mqtt_incoming_data_cb(void *arg, const u8_t *data, u16_t len, u8_t flags)
+{
+    printf("Received data fragment: %.*s\n", len, data);
+
+    if (flags & MQTT_DATA_FLAG_LAST) {
+        printf("End of message.\n");
+    }
+}
+
+
+
+// Callback function for subscription response
+void mqtt_subscribe_callback(void *arg, err_t err)
+{
+	if (err == ERR_OK) {
+		printf("Subscribed successfully to topic: %s\n", (char *)arg);
+	} else {
+		printf("Failed to subscribe to topic: %s, error: %d\n", (char *)arg, err);
+	}
+}
+
+
+
+
 
 // FreeRTOS task to run MQTT client
 void vMQTTTask(void *pvParameters)
@@ -49,8 +85,8 @@ void vMQTTTask(void *pvParameters)
 
     ip_addr_t broker_ip;
     //IP4_ADDR(&broker_ip, 5, 196, 78, 28); // Replace with your broker IP
-    IP4_ADDR(&broker_ip, 192, 168, 101, 24);
-    /*struct mqtt_connect_client_info_t ci = {
+    IP4_ADDR(&broker_ip, 192, 168, 101, 27);
+    struct mqtt_connect_client_info_t ci = {
         .client_id = "stm32_freertos_client",
         .client_user = "user",
         .client_pass = "password",
@@ -59,9 +95,9 @@ void vMQTTTask(void *pvParameters)
         .will_msg = NULL,
         .will_qos = 0,
         .will_retain = 0
-    };*/
+    };
 
-    struct mqtt_connect_client_info_t ci = {
+    /*struct mqtt_connect_client_info_t ci = {
         .client_id = "stm32_freertos_client",
         .client_user = NULL,
         .client_pass = NULL,
@@ -70,13 +106,13 @@ void vMQTTTask(void *pvParameters)
         .will_msg = NULL,
         .will_qos = 0,
         .will_retain = 0
-    };
+    };*/
 
     //mqtt_tcp_err_cb: TCP error callback: error -14, arg: 0x20078154
 
     // Task can optionally wait here or do other work
     while (1) {
-        vTaskDelay(pdMS_TO_TICKS(5000)); // Delay to simulate periodic work
+        vTaskDelay(pdMS_TO_TICKS(10000)); // Delay to simulate periodic work
         static int counter = 0;
         if(mqttConnected)
         {
@@ -90,6 +126,24 @@ void vMQTTTask(void *pvParameters)
 			//mqtt_publish(client, topic, message, strlen(message), 0, 0, NULL, NULL);
 			mqtt_publish(client, topicTemp, str, strlen(str), 0, 0, NULL, NULL);
 			mqtt_publish(client, topicPres, str, strlen(str), 0, 0, NULL, NULL);
+
+			if(mqttSubscribed == false)
+			{
+				const char *topicSpeed = "speed1";
+				// Call the subscribe function
+				printf("Subscribe to mqtt speed1\n");
+				mqtt_set_inpub_callback(client, mqtt_incoming_publish_cb, mqtt_incoming_data_cb, NULL);
+				err_t result = mqtt_sub_unsub(client, topicSpeed, 0, mqtt_subscribe_callback, (void *)topicSpeed, 1);
+
+				if (result != ERR_OK)
+				{
+					printf("mqtt_sub_unsub() failed with error: %d\n", result);
+				}
+				else
+				{
+					mqttSubscribed = true;
+				}
+			}
         }
         else
         {
