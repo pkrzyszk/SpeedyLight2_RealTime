@@ -1,0 +1,3 @@
+[submodule "Core/Src/Dispatcher"]
+	path = Core/Src/Dispatcher
+	url = git@github.com:Sewertronics/Dispatcher.git

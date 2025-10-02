@@ -16,6 +16,7 @@
 #include "mqtt_publisher.h"
 #include "stdbool.h"
 #include "tcpip.h"
+#include "../Dispatcher/dispatcher.hpp"
 
 static bool mqttConnected = false;
 static bool mqttSubscribed = false;
@@ -45,6 +46,11 @@ void mqtt_incoming_publish_cb(void *arg, const char *topic, u32_t tot_len)
 void mqtt_incoming_data_cb(void *arg, const u8_t *data, u16_t len, u8_t flags)
 {
     printf("Received data fragment: %.*s\n", len, data);
+    float speed = atof((const char*)data);
+    Dispatcher* Dispatcher = Dispatcher::getDispatcher();
+    sMsgMotorStatus Control = {MTR_MOVING,0,1};
+    Control.speed = speed;
+    Dispatcher->DispatcherPostMsgByCopy(MT_MTR_CONTROL, &Control, sizeof(Control));
 
     if (flags & MQTT_DATA_FLAG_LAST) {
         printf("End of message.\n");
@@ -68,7 +74,7 @@ void mqtt_subscribe_callback(void *arg, err_t err)
 
 
 // FreeRTOS task to run MQTT client
-void vMQTTTask(void *pvParameters)
+void task_MQTT(void *pvParameters)
 {
 	printf("Started vMQTTTask task\n");
 	//osDelay(20000);
@@ -173,8 +179,16 @@ void vMQTTTask(void *pvParameters)
 }
 
 // Call this from main or another init function
-void start_mqtt_task(void) {
+/*void start_mqtt_task(void) {
     xTaskCreate(vMQTTTask, "MQTTTask", 1024, NULL, tskIDLE_PRIORITY, NULL);
+}*/
+
+void task_Mqtt_Init(uint8_t taskIndex)
+{
+	Dispatcher* Dispatcher = Dispatcher::getDispatcher();
+	//Dispatcher->dispatcherSubscribe(MT_MTR_CONTROL, taskIndex);
+	//Dispatcher->dispatcherSubscribe(MT_RESET_DISTANCE, taskIndex);
+
 }
 
 
