@@ -15,6 +15,7 @@
 #include <stdio.h>
 #include "mqtt_publisher.h"
 #include "stdbool.h"
+#include "tcpip.h"
 
 static bool mqttConnected = false;
 static bool mqttSubscribed = false;
@@ -124,8 +125,10 @@ void vMQTTTask(void *pvParameters)
 			sprintf(str, "%d", counter++);
 
 			//mqtt_publish(client, topic, message, strlen(message), 0, 0, NULL, NULL);
+			LOCK_TCPIP_CORE();
 			mqtt_publish(client, topicTemp, str, strlen(str), 0, 0, NULL, NULL);
 			mqtt_publish(client, topicPres, str, strlen(str), 0, 0, NULL, NULL);
+			UNLOCK_TCPIP_CORE();
 
 			if(mqttSubscribed == false)
 			{
@@ -133,7 +136,9 @@ void vMQTTTask(void *pvParameters)
 				// Call the subscribe function
 				printf("Subscribe to mqtt speed1\n");
 				mqtt_set_inpub_callback(client, mqtt_incoming_publish_cb, mqtt_incoming_data_cb, NULL);
+				LOCK_TCPIP_CORE();
 				err_t result = mqtt_sub_unsub(client, topicSpeed, 0, mqtt_subscribe_callback, (void *)topicSpeed, 1);
+				UNLOCK_TCPIP_CORE();
 
 				if (result != ERR_OK)
 				{
@@ -149,11 +154,13 @@ void vMQTTTask(void *pvParameters)
         {
         	printf("################### connecting MQTT ####################\n");
 
+        	LOCK_TCPIP_CORE();
         	err_t err = mqtt_client_connect(client, &broker_ip, MQTT_PORT, mqtt_connection_cb, NULL, &ci);
+        	UNLOCK_TCPIP_CORE();
 			if (err != ERR_OK) {
 				printf("MQTT connect failed: %d\n", err);
-				mqtt_client_free(client);
-				vTaskDelete(NULL);
+				//mqtt_client_free(client);
+				//vTaskDelete(NULL);
 				return;
 			}
 			else

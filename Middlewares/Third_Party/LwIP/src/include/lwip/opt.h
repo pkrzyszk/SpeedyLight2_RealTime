@@ -224,7 +224,16 @@
  * @see @ref multithreading
  */
 #if !defined LWIP_ASSERT_CORE_LOCKED || defined __DOXYGEN__
-#define LWIP_ASSERT_CORE_LOCKED()
+#ifdef __cplusplus
+extern "C" {
+#endif
+/* Will assert if the TCP/IP core mutex is initialized and not locked.
+ * Defined in sys_arch.c. */
+void lwip_assert_core_locked(void);
+#define LWIP_ASSERT_CORE_LOCKED()   do { lwip_assert_core_locked(); } while (0)
+#ifdef __cplusplus
+}
+#endif
 #endif
 
 /**

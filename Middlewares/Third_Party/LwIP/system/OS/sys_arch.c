@@ -45,6 +45,23 @@
 int errno;
 #endif
 
+
+#if LWIP_TCPIP_CORE_LOCKING
+extern sys_mutex_t lock_tcpip_core;
+void lwip_assert_core_locked(void)
+{
+  /* If the mutex hasn't been initialized yet, then give it a pass. */
+  if (NULL == lock_tcpip_core)
+    return;
+  /* If we're inside an interrupt, then there's no way we can hold the mutex,
+   * so give it a pass. */
+  if (xPortIsInsideInterrupt())
+    return;
+  /* Ensure that the mutex is currently taken (locked). */
+  LWIP_ASSERT("TCPIP core is locked", (0 == uxSemaphoreGetCount(lock_tcpip_core)));
+}
+#endif // LWIP_TCPIP_CORE_LOCKING‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍
+
 /*-----------------------------------------------------------------------------------*/
 //  Creates an empty mailbox.
 err_t sys_mbox_new(sys_mbox_t *mbox, int size)
