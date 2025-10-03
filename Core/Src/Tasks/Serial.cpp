@@ -2,10 +2,9 @@
 
 #include "main.h"
 #include "cmsis_os.h"
-#include <string.h>
 #include <cstdarg>
-#include <stdio.h>
-
+#include <cstring>
+#include <cstdio>
 //#include "usart.h"
 
 #include "../Dispatcher/dispatcher.hpp"
@@ -92,7 +91,8 @@ void task_Serial(void *pvParameters)
     Dispatcher_Task *TaskPtr = (Dispatcher_Task*) pvParameters;
 	sMsgStruct Msg = {};
 
-	SerialSend("*** Sewertronics ***\n\r");
+	SerialSend("*** Sewertronics 2 %.2f 2***\n\r", 2.0);
+	printf("*** Sewertronics 2 %.2f 2***\n\r", 2.0);
 
 	for (;;)
 	{
@@ -109,7 +109,7 @@ void task_Serial(void *pvParameters)
 				case MT_MTR_CONTROL:
 				{
 					sMsgMotorStatus *Control = (sMsgMotorStatus*)Msg.data;
-					//SerialSend("MtrCtrl Speed: %.2f Mod: %.2f Stat %d\n\r", Control->speed, Control->modifier, Control->status);
+					SerialSend("MtrCtrl Speed: %.2f Mod: %.2f Stat %d\n\r", Control->speed, Control->modifier, Control->status);
 					printf("MtrCtrl Speed: %.2f Mod: %.2f Stat %d\n\r", Control->speed, Control->modifier, Control->status);
 					break;
 				}
@@ -219,7 +219,7 @@ void task_Serial(void *pvParameters)
 void task_Serial_Init(uint8_t taskIndex)
 {
 	Dispatcher* Dispatcher = Dispatcher::getDispatcher();
-	Dispatcher->dispatcherSubscribe(MT_UVHEAD_PRESSURE, taskIndex);
+	/*Dispatcher->dispatcherSubscribe(MT_UVHEAD_PRESSURE, taskIndex);
 
 	Dispatcher->dispatcherSubscribe(MT_TEMPERATURE, taskIndex);
 
@@ -227,8 +227,8 @@ void task_Serial_Init(uint8_t taskIndex)
 	Dispatcher->dispatcherSubscribe(MT_REED_SWITCH, taskIndex);
 
 	Dispatcher->dispatcherSubscribe(MT_MTR_CONTROL, taskIndex);
-	Dispatcher->dispatcherSubscribe(MT_DISTANCE, taskIndex);
-	Dispatcher->dispatcherSubscribe(MT_MODBUS_STATE, taskIndex);
+	Dispatcher->dispatcherSubscribe(MT_DISTANCE, taskIndex);*
+	//Dispatcher->dispatcherSubscribe(MT_MODBUS_STATE, taskIndex);
 
 	/*Dispatcher->dispatcherSubscribe(MT_MTR_STATUS, taskIndex);
 

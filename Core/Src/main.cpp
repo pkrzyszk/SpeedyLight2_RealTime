@@ -88,8 +88,8 @@ void AddTasks(void)
 	  std::vector<Dispatcher_Task> DispatcherTasks =
 	  {
 	  Dispatcher_Task("Dummy", task_DummyTask, task_DummyTask_Init,(tskIDLE_PRIORITY + 1),4096,NULL,true,NULL,true),
-	  Dispatcher_Task("Serial", task_Serial, task_Serial_Init,(tskIDLE_PRIORITY + 1),1096,NULL,true,NULL,true),
-	  //Dispatcher_Task("Modbus", task_ModBus, task_ModBus_Init,(tskIDLE_PRIORITY + 1),4096,NULL,true,NULL,true),
+	  Dispatcher_Task("Serial", task_Serial, task_Serial_Init,(tskIDLE_PRIORITY + 1),4096,NULL,true,NULL,true),
+	  Dispatcher_Task("Modbus", task_ModBus, task_ModBus_Init,(tskIDLE_PRIORITY + 1),4096,NULL,true,NULL,true),
 	  Dispatcher_Task("Mqtt", task_MQTT, task_Mqtt_Init,(tskIDLE_PRIORITY + 1),4096,NULL,true,NULL,true)
 
 	  };
@@ -474,7 +474,7 @@ void StartDefaultTask(void const * argument)
 	/*snprintf((char*)buf, 50, "IP address: %s\r\n", ip4addr_ntoa(netif_ip4_addr(&gnetif)));
 	HAL_UART_Transmit(&huart3, buf, 50, HAL_MAX_DELAY);*/
     osDelay(1000);
-    HAL_GPIO_TogglePin(GPIOB, LD1_Pin|LD3_Pin|LD2_Pin);
+    HAL_GPIO_TogglePin(GPIOB, LD1_Pin);
   }
   /* USER CODE END 5 */
 }

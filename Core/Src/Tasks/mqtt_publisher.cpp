@@ -18,19 +18,19 @@
 #include "tcpip.h"
 #include "../Dispatcher/dispatcher.hpp"
 
-static bool mqttConnected = false;
+static int mqttConnected = 0;
 static bool mqttSubscribed = false;
 
 // MQTT connection callback
 void mqtt_connection_cb(mqtt_client_t *client, void *arg, mqtt_connection_status_t status) {
     if (status == MQTT_CONNECT_ACCEPTED) {
         printf("MQTT connection accepted!\n");
-        mqttConnected = true;
+        mqttConnected = 1;
 
 
     } else {
         printf("!@#$   MQTT connection failed: %d   !@#$\n", status);
-        mqttConnected = false;
+        mqttConnected = 0;
         mqttSubscribed = false;
     }
 }
@@ -40,6 +40,22 @@ void mqtt_connection_cb(mqtt_client_t *client, void *arg, mqtt_connection_status
 void mqtt_incoming_publish_cb(void *arg, const char *topic, u32_t tot_len)
 {
     printf("Incoming message on topic: %s, total length: %lu\n", topic, (unsigned long)tot_len);
+}
+
+err_t
+simple_mqtt_publish(mqtt_client_t *client, const char *topic, const void *payload, u16_t payload_length, int connected)
+{
+	if(connected == 1)
+	{
+		LOCK_TCPIP_CORE();
+		err_t ret = mqtt_publish(client, topic, payload, payload_length, 0, 0, NULL, NULL);
+		UNLOCK_TCPIP_CORE();
+		return ret;
+	}
+	else
+	{
+		return ERR_CONN;
+	}
 }
 
 // Called for each fragment of the payload
@@ -77,6 +93,8 @@ void mqtt_subscribe_callback(void *arg, err_t err)
 void task_MQTT(void *pvParameters)
 {
 	printf("Started vMQTTTask task\n");
+    Dispatcher_Task *TaskPtr = (Dispatcher_Task*) pvParameters;
+	sMsgStruct Msg = {};
 	//osDelay(20000);
 
     mqtt_client_t *client = mqtt_client_new();
@@ -92,7 +110,8 @@ void task_MQTT(void *pvParameters)
 
     ip_addr_t broker_ip;
     //IP4_ADDR(&broker_ip, 5, 196, 78, 28); // Replace with your broker IP
-    IP4_ADDR(&broker_ip, 192, 168, 101, 27);
+    //IP4_ADDR(&broker_ip, 192, 168, 101, 27);
+    IP4_ADDR(&broker_ip, 10, 74, 90, 17); //work
     struct mqtt_connect_client_info_t ci = {
         .client_id = "stm32_freertos_client",
         .client_user = "user",
@@ -119,26 +138,74 @@ void task_MQTT(void *pvParameters)
 
     // Task can optionally wait here or do other work
     while (1) {
-        vTaskDelay(pdMS_TO_TICKS(10000)); // Delay to simulate periodic work
+    	HAL_GPIO_TogglePin(GPIOB, LD2_Pin);
+        //vTaskDelay(10);
+        if (xQueueReceive(TaskPtr->GetQueueHandle(), &Msg, 1000))
+		{
+
+			switch (Msg.type) {
+				case MT_UVHEAD_PRESSURE:
+				{
+					sMsgUvHeadPressure *Status = (sMsgUvHeadPressure*)Msg.data;
+					const char *topic = "head/1/pressure/1";
+					char str[20];
+					sprintf(str, "%.2f", Status->uvHeadPressure);
+					simple_mqtt_publish(client, topic, str, strlen(str), mqttConnected);
+					break;
+				}
+				case MT_DISTANCE:
+				{
+					const char *topicDist= "pulling/1/dist/1";
+					sMsgDistance *Status = (sMsgDistance*)Msg.data;
+					char str[20];
+					sprintf(str, "%.2f", Status->distance);
+					simple_mqtt_publish(client, topicDist, str, strlen(str), mqttConnected);
+					//SerialSend("Distance: %.2f m/min\n\r", Status->distance);
+					break;
+				}
+				case MT_TEMPERATURE:
+				{
+					const char *topicTemp = "head/1/temp/1";
+					sMsgTmpr *Status = (sMsgTmpr*)Msg.data;
+					//SerialSend("Temp: %.2f ��C\n\r", Status->temperature);
+					char str[20];
+					sprintf(str, "%.2f", Status->temperature);
+					simple_mqtt_publish(client, topicTemp, str, strlen(str), mqttConnected);
+					break;
+				}
+				case MT_UVHEAD_HUMIDITY:
+				{
+					const char *topic = "head/1/humid/1";
+					sMsgHumidity *Status = (sMsgHumidity*)Msg.data;
+					char str[20];
+					sprintf(str, "%.2f", Status->humidity);
+					simple_mqtt_publish(client, topic, str, strlen(str), mqttConnected);
+					break;
+				}
+				default:
+					break;
+			}
+		}
+
         static int counter = 0;
-        if(mqttConnected)
+        if(mqttConnected == 1)
         {
-			const char *topicTemp = "temp1";
-			const char *topicPres = "pressure1";
+			const char *topicTemp = "head/1/temp/1";
+			const char *topicPres = "head/1/pressure/1";
 			const char *message = "Hello from Piotr!";
 
 			char str[30];
 			sprintf(str, "%d", counter++);
 
 			//mqtt_publish(client, topic, message, strlen(message), 0, 0, NULL, NULL);
-			LOCK_TCPIP_CORE();
+			/*LOCK_TCPIP_CORE();
 			mqtt_publish(client, topicTemp, str, strlen(str), 0, 0, NULL, NULL);
 			mqtt_publish(client, topicPres, str, strlen(str), 0, 0, NULL, NULL);
-			UNLOCK_TCPIP_CORE();
+			UNLOCK_TCPIP_CORE();*/
 
 			if(mqttSubscribed == false)
 			{
-				const char *topicSpeed = "speed1";
+				const char *topicSpeed = "pulling/1/speed/1";
 				// Call the subscribe function
 				printf("Subscribe to mqtt speed1\n");
 				mqtt_set_inpub_callback(client, mqtt_incoming_publish_cb, mqtt_incoming_data_cb, NULL);
@@ -156,18 +223,20 @@ void task_MQTT(void *pvParameters)
 				}
 			}
         }
-        else
+        else if(mqttConnected == 0)
         {
-        	printf("################### connecting MQTT ####################\n");
-
+        	printf("################### connecting MQTT in 10s ####################\n");
+        	vTaskDelay(pdMS_TO_TICKS(10000));
+        	mqttConnected = 2;
         	LOCK_TCPIP_CORE();
         	err_t err = mqtt_client_connect(client, &broker_ip, MQTT_PORT, mqtt_connection_cb, NULL, &ci);
         	UNLOCK_TCPIP_CORE();
 			if (err != ERR_OK) {
 				printf("MQTT connect failed: %d\n", err);
+				mqttConnected = 0;
 				//mqtt_client_free(client);
 				//vTaskDelete(NULL);
-				return;
+				//return;
 			}
 			else
 			{
@@ -186,6 +255,11 @@ void task_MQTT(void *pvParameters)
 void task_Mqtt_Init(uint8_t taskIndex)
 {
 	Dispatcher* Dispatcher = Dispatcher::getDispatcher();
+	Dispatcher->dispatcherSubscribe(MT_TEMPERATURE, taskIndex);
+	Dispatcher->dispatcherSubscribe(MT_DISTANCE, taskIndex);
+	Dispatcher->dispatcherSubscribe(MT_UVHEAD_PRESSURE, taskIndex);
+	Dispatcher->dispatcherSubscribe(MT_UVHEAD_HUMIDITY, taskIndex);
+
 	//Dispatcher->dispatcherSubscribe(MT_MTR_CONTROL, taskIndex);
 	//Dispatcher->dispatcherSubscribe(MT_RESET_DISTANCE, taskIndex);
 

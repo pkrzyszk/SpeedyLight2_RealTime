@@ -67,7 +67,7 @@ void Modbus_SendSetRequest(uint8_t slaveAddress, uint8_t functionCode, uint16_t 
     request[i++] = (crc >> 8) & 0xFF;
 
 	//HAL_GPIO_WritePin(USART1_DIR_GPIO_Port, USART1_DIR_Pin, GPIO_PIN_SET);
-    HAL_UART_Transmit(&huart1, request, i, HAL_MAX_DELAY);
+    HAL_UART_Transmit(&huart2, request, i, HAL_MAX_DELAY);
 	//HAL_GPIO_WritePin(USART1_DIR_GPIO_Port, USART1_DIR_Pin, GPIO_PIN_RESET);
 }
 
@@ -155,7 +155,7 @@ int MODBUS_receive(int numberOfBytes, uint8_t* payloadbuffer)
     uint32_t size = 0;
     uint32_t sizeTotal = 0;;
 
-    HAL_StatusTypeDef RETvAL = HAL_UART_Receive(&huart1, request, numberOfBytes, RESPONSE_DELAY);
+    HAL_StatusTypeDef RETvAL = HAL_UART_Receive(&huart2, request, numberOfBytes, RESPONSE_DELAY);
     //SerialSend("0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x\n\r", request[0], request[1], request[2], request[3], request[4], request[5], request[6], request[7]);
 
 	// Receive Modbus request simple draft assumes frame has 8 bytes
@@ -166,7 +166,7 @@ int MODBUS_receive(int numberOfBytes, uint8_t* payloadbuffer)
 	else
 	{
 		uint8_t temp = 0;
-		while(HAL_UART_Receive(&huart1, &temp, 1, 0) == HAL_OK);
+		while(HAL_UART_Receive(&huart2, &temp, 1, 0) == HAL_OK);
 		ReportError((eMODS_State)RETvAL);
 		return 0;
 	}
@@ -268,7 +268,7 @@ void setSpeed(Dispatcher* Dispatcher, float setSpeed)
 	Modbus_SendSetRequest(PULLING_UNIT_ADDRESS,0x10,MODBUS_SET_SPEED_REG,RegisterLen, temp.bytes);
 	//volatile int received = MODBUS_receive(8, buff); //ignore for now just testing
 	uint8_t tempByte = 0;
-	while(HAL_UART_Receive(&huart1, &tempByte, 1, 20) == HAL_OK);
+	while(HAL_UART_Receive(&huart2, &tempByte, 1, 20) == HAL_OK);
 
 }
 
@@ -297,7 +297,7 @@ void resetReeds(Dispatcher* Dispatcher)
 	Modbus_SendRequest(UV_HEAD_ADDRESS,5,MODBUS_RESET_REEDS_REG,RegisterLen);
 	//volatile int received = MODBUS_receive(8, buff); //ignore for now just testing
 	uint8_t tempByte = 0;
-	while(HAL_UART_Receive(&huart1, &tempByte, 1, 20) == HAL_OK);
+	while(HAL_UART_Receive(&huart2, &tempByte, 1, 20) == HAL_OK);
 	//todo check if response received
 
 
@@ -475,6 +475,7 @@ void task_ModBus(void *pvParameters)
 		checkTemp(Dispatcher);
 
 		vTaskDelay(200);
+		HAL_GPIO_TogglePin(GPIOB, LD3_Pin);
 	}
 
 
