@@ -110,8 +110,8 @@ void task_MQTT(void *pvParameters)
 
     ip_addr_t broker_ip;
     //IP4_ADDR(&broker_ip, 5, 196, 78, 28); // Replace with your broker IP
-    //IP4_ADDR(&broker_ip, 192, 168, 101, 27);
-    IP4_ADDR(&broker_ip, 10, 74, 90, 17); //work
+    IP4_ADDR(&broker_ip, 192, 168, 101, 27); //home
+    //IP4_ADDR(&broker_ip, 10, 74, 90, 17); //work
     struct mqtt_connect_client_info_t ci = {
         .client_id = "stm32_freertos_client",
         .client_user = "user",
@@ -171,6 +171,18 @@ void task_MQTT(void *pvParameters)
 					char str[20];
 					sprintf(str, "%.2f", Status->temperature);
 					simple_mqtt_publish(client, topicTemp, str, strlen(str), mqttConnected);
+					break;
+				}
+				case MT_MODBUS_STATE:
+				{
+					sMsgModbusState *Status = (sMsgModbusState*)Msg.data;
+
+					const char *topic = "CU/1/modbus/1";
+					char str[20];
+					static int errCounter= 0;
+					errCounter++;
+					sprintf(str, "%d", errCounter);
+					simple_mqtt_publish(client, topic, str, strlen(str), mqttConnected);
 					break;
 				}
 				case MT_UVHEAD_HUMIDITY:
@@ -259,6 +271,7 @@ void task_Mqtt_Init(uint8_t taskIndex)
 	Dispatcher->dispatcherSubscribe(MT_DISTANCE, taskIndex);
 	Dispatcher->dispatcherSubscribe(MT_UVHEAD_PRESSURE, taskIndex);
 	Dispatcher->dispatcherSubscribe(MT_UVHEAD_HUMIDITY, taskIndex);
+	Dispatcher->dispatcherSubscribe(MT_MODBUS_STATE, taskIndex);
 
 	//Dispatcher->dispatcherSubscribe(MT_MTR_CONTROL, taskIndex);
 	//Dispatcher->dispatcherSubscribe(MT_RESET_DISTANCE, taskIndex);

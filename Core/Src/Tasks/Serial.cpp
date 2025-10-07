@@ -219,16 +219,16 @@ void task_Serial(void *pvParameters)
 void task_Serial_Init(uint8_t taskIndex)
 {
 	Dispatcher* Dispatcher = Dispatcher::getDispatcher();
-	/*Dispatcher->dispatcherSubscribe(MT_UVHEAD_PRESSURE, taskIndex);
+	Dispatcher->dispatcherSubscribe(MT_UVHEAD_PRESSURE, taskIndex);
 
 	Dispatcher->dispatcherSubscribe(MT_TEMPERATURE, taskIndex);
 
 	Dispatcher->dispatcherSubscribe(MT_UVHEAD_HUMIDITY, taskIndex);
 	Dispatcher->dispatcherSubscribe(MT_REED_SWITCH, taskIndex);
 
-	Dispatcher->dispatcherSubscribe(MT_MTR_CONTROL, taskIndex);
-	Dispatcher->dispatcherSubscribe(MT_DISTANCE, taskIndex);*
-	//Dispatcher->dispatcherSubscribe(MT_MODBUS_STATE, taskIndex);
+	//Dispatcher->dispatcherSubscribe(MT_MTR_CONTROL, taskIndex);
+	Dispatcher->dispatcherSubscribe(MT_DISTANCE, taskIndex);
+
 
 	/*Dispatcher->dispatcherSubscribe(MT_MTR_STATUS, taskIndex);
 
@@ -242,6 +242,7 @@ void task_Serial_Init(uint8_t taskIndex)
 
 	//Dispatcher->dispatcherSubscribe(MT_BUTTON, taskIndex);*/
 	//Dispatcher->dispatcherSubscribe(MT_KNOB, taskIndex);
+	Dispatcher->dispatcherSubscribe(MT_MODBUS_STATE, taskIndex);
 
 
 

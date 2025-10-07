@@ -146,7 +146,7 @@ int Modbus_ProcessResponse(uint8_t *request, uint16_t length, uint8_t *payload) 
     return j;
 }
 
-#define RESPONSE_DELAY 20 //was 100
+#define RESPONSE_DELAY 10 //was 100
 int MODBUS_receive(int numberOfBytes, uint8_t* payloadbuffer)
 {
 
@@ -385,7 +385,8 @@ void checkReeds(Dispatcher* Dispatcher)
 
 		Dispatcher->DispatcherPostMsgByCopy(MT_REED_SWITCH, &ReedSwitchStatus, sizeof(ReedSwitchStatus));
 		//reset after reading
-		resetReeds(Dispatcher);
+		vTaskDelay(1);
+	    resetReeds(Dispatcher);
 	}
 
 
@@ -474,7 +475,7 @@ void task_ModBus(void *pvParameters)
 		vTaskDelay(DELAY_MOD);
 		checkTemp(Dispatcher);
 
-		vTaskDelay(200);
+		vTaskDelay(500);
 		HAL_GPIO_TogglePin(GPIOB, LD3_Pin);
 	}
 

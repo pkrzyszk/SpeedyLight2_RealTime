@@ -88,7 +88,7 @@ void AddTasks(void)
 	  std::vector<Dispatcher_Task> DispatcherTasks =
 	  {
 	  Dispatcher_Task("Dummy", task_DummyTask, task_DummyTask_Init,(tskIDLE_PRIORITY + 1),4096,NULL,true,NULL,true),
-	  Dispatcher_Task("Serial", task_Serial, task_Serial_Init,(tskIDLE_PRIORITY + 1),4096,NULL,true,NULL,true),
+	  //Dispatcher_Task("Serial", task_Serial, task_Serial_Init,(tskIDLE_PRIORITY + 1),4096,NULL,true,NULL,true),
 	  Dispatcher_Task("Modbus", task_ModBus, task_ModBus_Init,(tskIDLE_PRIORITY + 1),4096,NULL,true,NULL,true),
 	  Dispatcher_Task("Mqtt", task_MQTT, task_Mqtt_Init,(tskIDLE_PRIORITY + 1),4096,NULL,true,NULL,true)
 
