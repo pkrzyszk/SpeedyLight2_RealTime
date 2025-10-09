@@ -172,6 +172,17 @@ void mqtt_subscribe_callback(void *arg, err_t err)
 
 
 
+const char* msgTopicLookup[MT_NUM_TYPES] = { NULL };
+
+void initMsgTopicLookup(void)
+{
+    msgTopicLookup[MT_UVHEAD_PRESSURE]   = "head/1/pressure/1";
+    msgTopicLookup[MT_DISTANCE]          = "pulling/1/dist/1";
+    msgTopicLookup[MT_TEMPERATURE]       = "head/1/temp/1";
+    msgTopicLookup[MT_MODBUS_STATE]      = "CU/1/modbus/1";
+    msgTopicLookup[MT_REED_SWITCH]       = "head/1/reed/1";
+    msgTopicLookup[MT_UVHEAD_HUMIDITY]   = "head/1/humid/1";
+}
 
 
 
@@ -222,77 +233,64 @@ void task_MQTT(void *pvParameters)
 
     //mqtt_tcp_err_cb: TCP error callback: error -14, arg: 0x20078154
 
+
+
+	initMsgTopicLookup();
+
+
     // Task can optionally wait here or do other work
     while (1) {
     	HAL_GPIO_TogglePin(GPIOB, LD2_Pin);
         //vTaskDelay(10);
         if (xQueueReceive(TaskPtr->GetQueueHandle(), &Msg, 1000))
 		{
-
+        	char str[20] = "err";
+        	const char *topic = msgTopicLookup[Msg.type];
 			switch (Msg.type) {
 				case MT_UVHEAD_PRESSURE:
 				{
 					sMsgUvHeadPressure *Status = (sMsgUvHeadPressure*)Msg.data;
-					const char *topic = "head/1/pressure/1";
-					char str[20];
 					sprintf(str, "%.2f", Status->uvHeadPressure/100.0);
-					simple_mqtt_publish(client, topic, str, strlen(str), mqttConnected);
+
 					break;
 				}
 				case MT_DISTANCE:
 				{
-					const char *topicDist= "pulling/1/dist/1";
 					sMsgDistance *Status = (sMsgDistance*)Msg.data;
-					char str[20];
 					sprintf(str, "%.2f", Status->distance);
-					simple_mqtt_publish(client, topicDist, str, strlen(str), mqttConnected);
-					//SerialSend("Distance: %.2f m/min\n\r", Status->distance);
+
 					break;
 				}
 				case MT_TEMPERATURE:
 				{
-					const char *topicTemp = "head/1/temp/1";
-					sMsgTmpr *Status = (sMsgTmpr*)Msg.data;
-					//SerialSend("Temp: %.2f ��C\n\r", Status->temperature);
-					char str[20];
+     				sMsgTmpr *Status = (sMsgTmpr*)Msg.data;
 					sprintf(str, "%.2f", Status->temperature);
-					simple_mqtt_publish(client, topicTemp, str, strlen(str), mqttConnected);
 					break;
 				}
 				case MT_MODBUS_STATE:
 				{
 					sMsgModbusState *Status = (sMsgModbusState*)Msg.data;
-
-					const char *topic = "CU/1/modbus/1";
-					char str[20];
 					static int errCounter= 0;
 					errCounter++;
 					sprintf(str, "%d", errCounter);
-					simple_mqtt_publish(client, topic, str, strlen(str), mqttConnected);
 					break;
 				}
 				case MT_REED_SWITCH:
 				{
-					const char *topic = "head/1/reed/1";
 					sMsgReedSwitchStatus *ReedSwitchStatus = (sMsgReedSwitchStatus*)Msg.data;
-					char str[20];
 					sprintf(str, "%d", (int)ReedSwitchStatus->state);
-					simple_mqtt_publish(client, topic, str, strlen(str), mqttConnected);
-
 					break;
 				}
 				case MT_UVHEAD_HUMIDITY:
 				{
-					const char *topic = "head/1/humid/1";
 					sMsgHumidity *Status = (sMsgHumidity*)Msg.data;
-					char str[20];
 					sprintf(str, "%.2f", Status->humidity);
-					simple_mqtt_publish(client, topic, str, strlen(str), mqttConnected);
 					break;
 				}
 				default:
 					break;
 			}
+			simple_mqtt_publish(client, topic, str, strlen(str), mqttConnected);
 		}
 
         static int counter = 0;
