@@ -5,6 +5,9 @@
 #include <cstdarg>
 #include <cstring>
 #include <cstdio>
+extern "C" {
+#include "task.h"
+}
 //#include "usart.h"
 
 #include "../Dispatcher/dispatcher.hpp"
@@ -52,6 +55,13 @@ void handleTempState(eTemp_State state)
 	}
 }
 
+void printTaskStats(void)
+{
+	char statsBuffer[512];
+	vTaskDelay(15000);
+	vTaskGetRunTimeStats(statsBuffer);
+	SerialSend(statsBuffer);
+}
 
 
 void HandleMODSState(eMODS_State state)
@@ -209,6 +219,7 @@ void task_Serial(void *pvParameters)
 				}
 		}
 		}
+		//printTaskStats();
 //		sMsgSondeSet MsgSondeSet = {};
 //		Dispatcher->DispatcherPostMsgByCopy(SL_CAN_RX_CHANNEL,SL_LED_BLUE,MT_BLUE_SET,&MsgSondeSet,sizeof(sMsgSondeSet));
 		//vTaskDelay(100);
@@ -219,15 +230,15 @@ void task_Serial(void *pvParameters)
 void task_Serial_Init(uint8_t taskIndex)
 {
 	Dispatcher* Dispatcher = Dispatcher::getDispatcher();
+	Dispatcher->dispatcherSubscribe(MT_MODBUS_STATE, taskIndex);
+
 	Dispatcher->dispatcherSubscribe(MT_UVHEAD_PRESSURE, taskIndex);
-
 	Dispatcher->dispatcherSubscribe(MT_TEMPERATURE, taskIndex);
-
 	Dispatcher->dispatcherSubscribe(MT_UVHEAD_HUMIDITY, taskIndex);
 	Dispatcher->dispatcherSubscribe(MT_REED_SWITCH, taskIndex);
+	Dispatcher->dispatcherSubscribe(MT_DISTANCE, taskIndex);
 
 	//Dispatcher->dispatcherSubscribe(MT_MTR_CONTROL, taskIndex);
-	Dispatcher->dispatcherSubscribe(MT_DISTANCE, taskIndex);
 
 
 	/*Dispatcher->dispatcherSubscribe(MT_MTR_STATUS, taskIndex);
@@ -242,7 +253,6 @@ void task_Serial_Init(uint8_t taskIndex)
 
 	//Dispatcher->dispatcherSubscribe(MT_BUTTON, taskIndex);*/
 	//Dispatcher->dispatcherSubscribe(MT_KNOB, taskIndex);
-	Dispatcher->dispatcherSubscribe(MT_MODBUS_STATE, taskIndex);
 
 
 
@@ -255,7 +265,7 @@ void SerialSendChar(const char *Text)
 
 void SerialSend(const char *Text, ...)
 {
-	uint8_t buf[250];
+	uint8_t buf[512];
 	va_list Params;
 	va_start(Params, Text);
 	vsprintf((char*)buf, Text, Params);

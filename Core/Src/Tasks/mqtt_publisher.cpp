@@ -149,7 +149,7 @@ void task_MQTT(void *pvParameters)
 					sMsgUvHeadPressure *Status = (sMsgUvHeadPressure*)Msg.data;
 					const char *topic = "head/1/pressure/1";
 					char str[20];
-					sprintf(str, "%.2f", Status->uvHeadPressure);
+					sprintf(str, "%.2f", Status->uvHeadPressure/100.0);
 					simple_mqtt_publish(client, topic, str, strlen(str), mqttConnected);
 					break;
 				}
@@ -237,8 +237,8 @@ void task_MQTT(void *pvParameters)
         }
         else if(mqttConnected == 0)
         {
-        	printf("################### connecting MQTT in 10s ####################\n");
-        	vTaskDelay(pdMS_TO_TICKS(10000));
+        	printf("################### connecting MQTT in 20s ####################\n");
+        	vTaskDelay(pdMS_TO_TICKS(20000));
         	mqttConnected = 2;
         	LOCK_TCPIP_CORE();
         	err_t err = mqtt_client_connect(client, &broker_ip, MQTT_PORT, mqtt_connection_cb, NULL, &ci);

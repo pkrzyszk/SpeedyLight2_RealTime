@@ -146,12 +146,24 @@ int Modbus_ProcessResponse(uint8_t *request, uint16_t length, uint8_t *payload) 
     return j;
 }
 
-#define RESPONSE_DELAY 10 //was 100
+#define RESPONSE_DELAY 15 //was 100
+
+int clearUartRxBuffer(void)
+{
+	int received = 0;
+	uint8_t temp = 0;
+	while (HAL_UART_Receive(&huart2, &temp, 1, 0) == HAL_OK)
+	{
+		received++;
+	}
+	return received;
+}
+
 int MODBUS_receive(int numberOfBytes, uint8_t* payloadbuffer)
 {
 
     // Buffer to store the received request
-    uint8_t request[50];
+    uint8_t request[50] = {0};
     uint32_t size = 0;
     uint32_t sizeTotal = 0;;
 
@@ -165,8 +177,7 @@ int MODBUS_receive(int numberOfBytes, uint8_t* payloadbuffer)
 	}
 	else
 	{
-		uint8_t temp = 0;
-		while(HAL_UART_Receive(&huart2, &temp, 1, 0) == HAL_OK);
+		clearUartRxBuffer();
 		ReportError((eMODS_State)RETvAL);
 		return 0;
 	}
@@ -402,7 +413,7 @@ void task_ModBus(void *pvParameters)
 	//Dispatcher->DispatcherPostMsgByCopy(MT_PSU_STATUS, &MSgPSU, sizeof(MSgPSU));
 	uint8_t buff[20] = {0};
 	int received = 0;
-#define DELAY_MOD 5
+#define DELAY_MOD 20
 
 	for (;;)
 	{
@@ -411,7 +422,7 @@ void task_ModBus(void *pvParameters)
 		sMsgResetDistance ResetDistance;
 		bool ctrl = false;
 		bool dist = false;
-
+		clearUartRxBuffer();
 		//make sure we act only on the last messaqge
 		while(xQueueReceive(TaskPtr->GetQueueHandle(), &Msg, 0) == pdPASS)
 		{
@@ -461,18 +472,23 @@ void task_ModBus(void *pvParameters)
 		}
 
 		vTaskDelay(DELAY_MOD);
+		clearUartRxBuffer();
 		checkDistance(Dispatcher);
 
 		vTaskDelay(DELAY_MOD);
+		clearUartRxBuffer();
 		checkHumidity(Dispatcher);
 
 		vTaskDelay(DELAY_MOD);
+		clearUartRxBuffer();
 		checkReeds(Dispatcher);
 
 		vTaskDelay(DELAY_MOD);
+		clearUartRxBuffer();
 		checkPressure(Dispatcher);
 
 		vTaskDelay(DELAY_MOD);
+		clearUartRxBuffer();
 		checkTemp(Dispatcher);
 
 		vTaskDelay(500);

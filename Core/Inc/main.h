@@ -49,6 +49,7 @@ extern "C" {
 extern UART_HandleTypeDef huart1;
 extern UART_HandleTypeDef huart2;
 extern UART_HandleTypeDef huart3;
+extern TIM_HandleTypeDef htim7;
 /* USER CODE END EM */
 
 /* Exported functions prototypes ---------------------------------------------*/

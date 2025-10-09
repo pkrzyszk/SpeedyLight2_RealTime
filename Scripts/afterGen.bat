@@ -1,0 +1,1 @@
+ren ..\Core\Src\main.c main.cpp

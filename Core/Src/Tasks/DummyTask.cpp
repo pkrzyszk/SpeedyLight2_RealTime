@@ -16,7 +16,7 @@ void task_DummyTask(void *pvParameters)
 
 	for (;;)
 	{
-		if (xQueueReceive(TaskPtr->GetQueueHandle(), &Msg, 100))
+		if (xQueueReceive(TaskPtr->GetQueueHandle(), &Msg, 1000))
 		{
 
 		}
