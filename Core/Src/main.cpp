@@ -521,6 +521,7 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
 	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 	Dispatcher* dispatcher = Dispatcher::getDispatcher();
 
+	// todo change magic number of modbus task to task name
 	TaskHandle_t taskHandle = dispatcher->getTaskHandle(2);
 	if(taskHandle != NULL)
 	{

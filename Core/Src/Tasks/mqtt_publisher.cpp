@@ -17,6 +17,7 @@
 #include "stdbool.h"
 #include "tcpip.h"
 #include "../Dispatcher/dispatcher.hpp"
+#include <vector>
 
 static int mqttConnected = 0;
 static bool mqttSubscribed = false;
@@ -35,38 +36,99 @@ void mqtt_connection_cb(mqtt_client_t *client, void *arg, mqtt_connection_status
     }
 }
 
-static int topicID = 0;
-const char *topicSpeed = "pulling/1/speed/1";
-const char *topicDistance = "pulling/1/distance/1";
-const char *topicPSU = "CU/1/PSU/1";
-const char *topicPrintStats = "CU/1/Stats/1";
+void mqtt_subscribe_callback(void *arg, err_t err);
+
+
+class MqttTopicHandler {
+public:
+    struct TopicEntry {
+        const char* topic;
+        int id;
+        const char* description;
+    };
+
+    MqttTopicHandler() : topicID(0) {
+        topics = {
+            { "pulling/1/speed/1",    1, "Speed topic received!" },
+            { "CU/1/PSU/1",           2, "UV topic received!" },
+            { "CU/1/Stats/1",         3, "Stats topic received!" },
+            { "pulling/1/distance/1", 4, "Distance topic received!" }
+        };
+    }
+
+    void handleIncoming(const char* topic, uint32_t tot_len)
+    {
+        for (const auto& entry : topics) {
+            if (strcmp(topic, entry.topic) == 0)
+            {
+                printf(entry.description);
+                topicID = entry.id;
+                return;
+            }
+        }
+
+        printf("Unknown topic received.\n");
+        topicID = 0;
+    }
+
+    void handleDataFragment(const uint8_t* data, uint16_t len, uint8_t flags)
+    {
+        printf("Received data fragment: %.*s for topic %d\n", len, data, topicID);
+
+        Dispatcher* dispatcher = Dispatcher::getDispatcher();
+
+        if (topicID == 1) {
+            float speed = std::atof(reinterpret_cast<const char*>(data));
+            sMsgMotorStatus control = { MTR_MOVING, 0, 1 };
+            control.speed = speed;
+            dispatcher->DispatcherPostMsgByCopy(MT_MTR_CONTROL, &control, sizeof(control));
+        }
+        else if (topicID == 2) {
+            float value = std::atof(reinterpret_cast<const char*>(data));
+            sMsgPSUControl control = { PSU_OFF, 0 };
+            control.setting = value;
+            dispatcher->DispatcherPostMsgByCopy(MT_PSU_CONTROL, &control, sizeof(control));
+        }
+        else if (topicID == 3) {
+            float value = std::atof(reinterpret_cast<const char*>(data)); // opcjonalne
+            int dummy;
+            dispatcher->DispatcherPostMsgByCopy(MT_PRINT_TASKS_STATS, &dummy, sizeof(dummy));
+        }
+        else if (topicID == 4) {
+            sMsgResetDistance reset = { true };
+            dispatcher->DispatcherPostMsgByCopy(MT_RESET_DISTANCE, &reset, sizeof(reset));
+        }
+
+        if (flags & MQTT_DATA_FLAG_LAST) {
+            printf("End of message.\n");
+        }
+    }
+
+
+    err_t subscribeAll(mqtt_client_t* client)
+    {
+		err_t result = ERR_OK;
+		for (const auto& entry : topics)
+		{
+			result |= mqtt_sub_unsub(client, entry.topic, 0, mqtt_subscribe_callback, (void*)entry.topic, 1);
+		}
+		return result;
+	}
+
+
+private:
+    std::vector<TopicEntry> topics;
+    int topicID;
+};
+
+
+MqttTopicHandler mqttHandler;
+
 // Called when a new publish message starts arriving
 void mqtt_incoming_publish_cb(void *arg, const char *topic, u32_t tot_len)
 {
     printf("Incoming message on topic: %s, total length: %lu\n", topic, (unsigned long)tot_len);
-    if (strcmp(topic, topicSpeed) == 0) {
-        // The topic matches "pulling/1/speed/1"
-        printf("Speed topic received!\n");
-        topicID = 1;
-    }
-    else if (strcmp(topic, topicPSU) == 0)
-    {
-        // The topic matches "pulling/1/speed/1"
-        printf("UV topic received!\n");
-        topicID = 2;
-    }
-    else if (strcmp(topic, topicPrintStats) == 0)
-	{
-		// The topic matches "pulling/1/speed/1"
-		printf("Stats topic received!\n");
-		topicID = 3;
-	}
-    else if (strcmp(topic, topicDistance) == 0)
-	{
-		// The topic matches "pulling/1/speed/1"
-		printf("Distance topic received!\n");
-		topicID = 4;
-	}
+    mqttHandler.handleIncoming(topic, tot_len);
 }
 
 err_t
@@ -88,42 +150,8 @@ simple_mqtt_publish(mqtt_client_t *client, const char *topic, const void *payloa
 // Called for each fragment of the payload
 void mqtt_incoming_data_cb(void *arg, const u8_t *data, u16_t len, u8_t flags)
 {
-	printf("Received data fragment: %.*s for topic %d\n", len, data, topicID);
-	if(topicID == 1)
-	{
-		float speed = atof((const char*)data);
-		Dispatcher* Dispatcher = Dispatcher::getDispatcher();
-		sMsgMotorStatus Control = {MTR_MOVING,0,1};
-		Control.speed = speed;
-		Dispatcher->DispatcherPostMsgByCopy(MT_MTR_CONTROL, &Control, sizeof(Control));
-    }
-	else if(topicID == 2)
-	{
-		float value = atof((const char*)data);
-		Dispatcher* Dispatcher = Dispatcher::getDispatcher();
-		sMsgPSUControl Control = {PSU_OFF,0};
-		Control.setting = value;
-		Dispatcher->DispatcherPostMsgByCopy(MT_PSU_CONTROL, &Control, sizeof(Control));
-    }
-	else if(topicID == 3)
-	{
-		float value = atof((const char*)data);
-		Dispatcher* Dispatcher = Dispatcher::getDispatcher();
-		int dummy;
-		Dispatcher->DispatcherPostMsgByCopy(MT_PRINT_TASKS_STATS, &dummy, sizeof(dummy));
-	}
-	else if(topicID == 4)
-	{
-		//float value = atof((const char*)data);
-		Dispatcher* Dispatcher = Dispatcher::getDispatcher();
-
-		sMsgResetDistance ResetDistance = {true};
-		Dispatcher->DispatcherPostMsgByCopy(MT_RESET_DISTANCE, &ResetDistance, sizeof(ResetDistance));
-	}
-
-
-
-    //Dispatcher->DispatcherPostMsgByCopy(MT_PRINT_TASKS_STATS, &Control, sizeof(Control));
+	printf("Received data fragment: %.*s\n", len, data);
+	mqttHandler.handleDataFragment(data, len, flags);
 
     if (flags & MQTT_DATA_FLAG_LAST) {
         printf("End of message.\n");
@@ -290,11 +318,7 @@ void task_MQTT(void *pvParameters)
 				printf("Subscribe to mqtt speed1\n");
 				mqtt_set_inpub_callback(client, mqtt_incoming_publish_cb, mqtt_incoming_data_cb, NULL);
 				LOCK_TCPIP_CORE();
-				err_t result = mqtt_sub_unsub(client, topicSpeed, 0, mqtt_subscribe_callback, (void *)topicSpeed, 1);
-				result |= mqtt_sub_unsub(client, topicPSU, 0, mqtt_subscribe_callback, (void *)topicPSU, 1);
-				result |= mqtt_sub_unsub(client, topicPrintStats, 0, mqtt_subscribe_callback, (void *)topicPrintStats, 1);
-				result |= mqtt_sub_unsub(client, topicDistance, 0, mqtt_subscribe_callback, (void *)topicDistance, 1);
-
+				err_t result = mqttHandler.subscribeAll(client);
 				UNLOCK_TCPIP_CORE();
 
 				if (result != ERR_OK)
