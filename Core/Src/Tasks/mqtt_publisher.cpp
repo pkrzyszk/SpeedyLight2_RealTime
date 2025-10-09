@@ -67,6 +67,7 @@ void mqtt_incoming_data_cb(void *arg, const u8_t *data, u16_t len, u8_t flags)
     sMsgMotorStatus Control = {MTR_MOVING,0,1};
     Control.speed = speed;
     Dispatcher->DispatcherPostMsgByCopy(MT_MTR_CONTROL, &Control, sizeof(Control));
+    Dispatcher->DispatcherPostMsgByCopy(MT_PRINT_TASKS_STATS, &Control, sizeof(Control));
 
     if (flags & MQTT_DATA_FLAG_LAST) {
         printf("End of message.\n");
@@ -110,7 +111,7 @@ void task_MQTT(void *pvParameters)
 
     ip_addr_t broker_ip;
     //IP4_ADDR(&broker_ip, 5, 196, 78, 28); // Replace with your broker IP
-    IP4_ADDR(&broker_ip, 192, 168, 101, 27); //home
+    IP4_ADDR(&broker_ip, 192, 168, 101, 2); //home
     //IP4_ADDR(&broker_ip, 10, 74, 90, 17); //work
     struct mqtt_connect_client_info_t ci = {
         .client_id = "stm32_freertos_client",
@@ -237,8 +238,8 @@ void task_MQTT(void *pvParameters)
         }
         else if(mqttConnected == 0)
         {
-        	printf("################### connecting MQTT in 20s ####################\n");
-        	vTaskDelay(pdMS_TO_TICKS(20000));
+        	printf("################### connecting MQTT in 10s ####################\n");
+        	vTaskDelay(pdMS_TO_TICKS(10000));
         	mqttConnected = 2;
         	LOCK_TCPIP_CORE();
         	err_t err = mqtt_client_connect(client, &broker_ip, MQTT_PORT, mqtt_connection_cb, NULL, &ci);

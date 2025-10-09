@@ -3,6 +3,7 @@
 #include "main.h"
 #include "cmsis_os.h"
 #include "../Dispatcher/dispatcher.hpp"
+#include "FreeRTOS.h"
 //#include "usart.h"
 
 
@@ -135,14 +136,32 @@ int Modbus_ProcessResponse(uint8_t *request, uint16_t length, uint8_t *payload) 
     }
 
     // extract payload
+
     int j = 0;
-    if(3 + quantityBytes < length)
+    if(functionCode == 5)
     {
-    	for(j = 0; j < quantityBytes; j++)
-    	{
-    		payload[i++] = request[3+j];
-    	}
+    	//simple echo of prebious message
+		//no quantity of bytes in the message
+		int bytesInResponse = 4;
+		if(2 + bytesInResponse < length)
+		{
+			for(j = 0; j < bytesInResponse; j++)
+			{
+				payload[i++] = request[2+j];
+			}
+		}
     }
+    else
+    {
+		if(3 + quantityBytes < length)
+		{
+			for(j = 0; j < quantityBytes; j++)
+			{
+				payload[i++] = request[3+j];
+			}
+		}
+    }
+
     return j;
 }
 
@@ -158,6 +177,7 @@ int clearUartRxBuffer(void)
 	}
 	return received;
 }
+uint8_t uartDMABuffer[256] = {0};
 
 int MODBUS_receive(int numberOfBytes, uint8_t* payloadbuffer)
 {
@@ -165,20 +185,36 @@ int MODBUS_receive(int numberOfBytes, uint8_t* payloadbuffer)
     // Buffer to store the received request
     uint8_t request[50] = {0};
     uint32_t size = 0;
-    uint32_t sizeTotal = 0;;
+    uint32_t sizeTotal = 0;
 
-    HAL_StatusTypeDef RETvAL = HAL_UART_Receive(&huart2, request, numberOfBytes, RESPONSE_DELAY);
+    //uint32_t size = 0;;
+
+    //HAL_StatusTypeDef RETvAL = HAL_UART_Receive(&huart2, request, numberOfBytes, RESPONSE_DELAY);
+    HAL_StatusTypeDef RETvAL = HAL_UARTEx_ReceiveToIdle_DMA(&huart2, uartDMABuffer, 256);
+    xTaskNotifyWait( 		0x00,               /* Don't clear any bits on entry. */
+							0xffffffff,          /* Clear all bits on exit. */
+							&size, /* Receives the notification value. */
+							20 );    /* Block indefinitely. */
     //SerialSend("0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x\n\r", request[0], request[1], request[2], request[3], request[4], request[5], request[6], request[7]);
 
 	// Receive Modbus request simple draft assumes frame has 8 bytes
-	if( RETvAL == HAL_OK)
+	if( RETvAL == HAL_OK && size > 0)
 	{
-		return Modbus_ProcessResponse(request, numberOfBytes, payloadbuffer);
+		return Modbus_ProcessResponse(uartDMABuffer, numberOfBytes, payloadbuffer);
 	}
 	else
 	{
-		clearUartRxBuffer();
-		ReportError((eMODS_State)RETvAL);
+		//clearUartRxBuffer();
+		HAL_UART_Abort(&huart2);
+		if(size == 0)
+		{
+			ReportError((eMODS_State)MODS_HAL_TIMEOUT);
+		}
+		else
+		{
+			ReportError((eMODS_State)RETvAL);
+		}
+
 		return 0;
 	}
 }
@@ -301,14 +337,17 @@ void resetDistance(Dispatcher* Dispatcher)
 	}
 }
 
-void resetReeds(Dispatcher* Dispatcher)
+int resetReeds(Dispatcher* Dispatcher)
 {
 	uint8_t buff[20] = {0};
 	uint16_t RegisterLen = 0xFF00;
 	Modbus_SendRequest(UV_HEAD_ADDRESS,5,MODBUS_RESET_REEDS_REG,RegisterLen);
 	//volatile int received = MODBUS_receive(8, buff); //ignore for now just testing
 	uint8_t tempByte = 0;
-	while(HAL_UART_Receive(&huart2, &tempByte, 1, 20) == HAL_OK);
+
+	int received = MODBUS_receive(8, buff);
+	return received;
+	//while(HAL_UART_Receive(&huart2, &tempByte, 1, 20) == HAL_OK);
 	//todo check if response received
 
 
@@ -422,7 +461,7 @@ void task_ModBus(void *pvParameters)
 		sMsgResetDistance ResetDistance;
 		bool ctrl = false;
 		bool dist = false;
-		clearUartRxBuffer();
+		//clearUartRxBuffer();
 		//make sure we act only on the last messaqge
 		while(xQueueReceive(TaskPtr->GetQueueHandle(), &Msg, 0) == pdPASS)
 		{
@@ -471,24 +510,13 @@ void task_ModBus(void *pvParameters)
 			dist = false;
 		}
 
-		vTaskDelay(DELAY_MOD);
-		clearUartRxBuffer();
+		/*vTaskDelay(DELAY_MOD);
+		clearUartRxBuffer();*/
 		checkDistance(Dispatcher);
 
-		vTaskDelay(DELAY_MOD);
-		clearUartRxBuffer();
-		checkHumidity(Dispatcher);
-
-		vTaskDelay(DELAY_MOD);
-		clearUartRxBuffer();
 		checkReeds(Dispatcher);
-
-		vTaskDelay(DELAY_MOD);
-		clearUartRxBuffer();
+		checkHumidity(Dispatcher);
 		checkPressure(Dispatcher);
-
-		vTaskDelay(DELAY_MOD);
-		clearUartRxBuffer();
 		checkTemp(Dispatcher);
 
 		vTaskDelay(500);

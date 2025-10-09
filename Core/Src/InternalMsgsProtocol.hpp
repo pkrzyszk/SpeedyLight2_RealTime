@@ -84,6 +84,7 @@ typedef enum _MsgTypes
 	MT_MODBUS_STATE,
 	MT_METRIC_STATE,
 	MT_RESET_DISTANCE,
+	MT_PRINT_TASKS_STATS,
 	/* Don't add after this line */
 	MT_NUM_TYPES
 }eMsgTypes;

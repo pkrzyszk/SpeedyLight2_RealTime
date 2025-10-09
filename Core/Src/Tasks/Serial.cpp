@@ -58,7 +58,7 @@ void handleTempState(eTemp_State state)
 void printTaskStats(void)
 {
 	char statsBuffer[512];
-	vTaskDelay(15000);
+	//vTaskDelay(15000);
 	vTaskGetRunTimeStats(statsBuffer);
 	SerialSend(statsBuffer);
 }
@@ -211,6 +211,12 @@ void task_Serial(void *pvParameters)
 					break;
 				}
 
+				case MT_PRINT_TASKS_STATS:
+				{
+					printTaskStats();
+					break;
+				}
+
 
 				default:
 				{
@@ -237,6 +243,8 @@ void task_Serial_Init(uint8_t taskIndex)
 	Dispatcher->dispatcherSubscribe(MT_UVHEAD_HUMIDITY, taskIndex);
 	Dispatcher->dispatcherSubscribe(MT_REED_SWITCH, taskIndex);
 	Dispatcher->dispatcherSubscribe(MT_DISTANCE, taskIndex);
+	Dispatcher->dispatcherSubscribe(MT_PRINT_TASKS_STATS, taskIndex);
+
 
 	//Dispatcher->dispatcherSubscribe(MT_MTR_CONTROL, taskIndex);
 

@@ -29,6 +29,7 @@
 #include "Tasks/Serial.hpp"
 #include "Tasks/DummyTask.hpp"
 #include <vector>
+#include "FreeRTOS.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -53,6 +54,7 @@ TIM_HandleTypeDef htim7;
 UART_HandleTypeDef huart1;
 UART_HandleTypeDef huart2;
 UART_HandleTypeDef huart3;
+DMA_HandleTypeDef hdma_usart2_rx;
 
 PCD_HandleTypeDef hpcd_USB_OTG_FS;
 
@@ -65,6 +67,7 @@ osThreadId defaultTaskHandle;
 void SystemClock_Config(void);
 static void MPU_Config(void);
 static void MX_GPIO_Init(void);
+static void MX_DMA_Init(void);
 static void MX_USART3_UART_Init(void);
 static void MX_USB_OTG_FS_PCD_Init(void);
 static void MX_USART1_UART_Init(void);
@@ -78,6 +81,15 @@ void StartDefaultTask(void const * argument);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+std::vector<Dispatcher_Task> DispatcherTasks =
+	  {
+	  Dispatcher_Task("Dummy", task_DummyTask, task_DummyTask_Init,(tskIDLE_PRIORITY + 1),4096,NULL,true,NULL,true),
+	  Dispatcher_Task("Serial", task_Serial, task_Serial_Init,(tskIDLE_PRIORITY + 1),5096,NULL,true,NULL,true),
+	  Dispatcher_Task("Modbus", task_ModBus, task_ModBus_Init,(tskIDLE_PRIORITY + 4),4096,NULL,true,NULL,true),
+	  Dispatcher_Task("Mqtt", task_MQTT, task_Mqtt_Init,(tskIDLE_PRIORITY + 1),4096,NULL,true,NULL,true)
+
+	  };
+
 extern "C" int __io_putchar(int ch)
 {
     HAL_UART_Transmit(&huart3, (uint8_t *)&ch, 1, HAL_MAX_DELAY);
@@ -88,14 +100,7 @@ void AddTasks(void)
 {
 	  //Task Objects
 	  Dispatcher* dispatcher = Dispatcher::getDispatcher();
-	  std::vector<Dispatcher_Task> DispatcherTasks =
-	  {
-	  Dispatcher_Task("Dummy", task_DummyTask, task_DummyTask_Init,(tskIDLE_PRIORITY + 1),4096,NULL,true,NULL,true),
-	  Dispatcher_Task("Serial", task_Serial, task_Serial_Init,(tskIDLE_PRIORITY + 1),5096,NULL,true,NULL,true),
-	  Dispatcher_Task("Modbus", task_ModBus, task_ModBus_Init,(tskIDLE_PRIORITY + 4),4096,NULL,true,NULL,true),
-	  Dispatcher_Task("Mqtt", task_MQTT, task_Mqtt_Init,(tskIDLE_PRIORITY + 1),4096,NULL,true,NULL,true)
 
-	  };
 
 	  for (Dispatcher_Task Task : DispatcherTasks)
 	  {
@@ -116,7 +121,8 @@ int main(void)
 
   /* USER CODE END 1 */
 
-  /* MPU Configuration--------------------------------------------------------*  MPU_Config();
+  /* MPU Configuration--------------------------------------------------------*/
+  MPU_Config();
 
   /* Enable the CPU Cache */
 
@@ -144,6 +150,7 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_DMA_Init();
   MX_USART3_UART_Init();
   MX_USB_OTG_FS_PCD_Init();
   MX_USART1_UART_Init();
@@ -432,6 +439,22 @@ static void MX_USB_OTG_FS_PCD_Init(void)
 }
 
 /**
+  * Enable DMA controller clock
+  */
+static void MX_DMA_Init(void)
+{
+
+  /* DMA controller clock enable */
+  __HAL_RCC_DMA1_CLK_ENABLE();
+
+  /* DMA interrupt init */
+  /* DMA1_Stream5_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Stream5_IRQn, 5, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Stream5_IRQn);
+
+}
+
+/**
   * @brief GPIO Initialization Function
   * @param None
   * @retval None
@@ -490,6 +513,44 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE BEGIN 4 */
 extern struct netif gnetif;
+volatile int uart_dma = 0;
+
+void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
+{
+	uart_dma = 1;
+	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+	Dispatcher* dispatcher = Dispatcher::getDispatcher();
+
+	TaskHandle_t taskHandle = dispatcher->getTaskHandle(2);
+	if(taskHandle != NULL)
+	{
+		xTaskNotifyFromISR( taskHandle, Size, eSetValueWithOverwrite, &xHigherPriorityTaskWoken );
+	}
+	/*xTaskNotifyIndexedFromISR( DispatcherTasks[2].GetTaskHandle(),
+		   0,
+		   Size,
+		   eSetBits,
+		   &xHigherPriorityTaskWoken );*/
+}
+
+
+void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
+{
+	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+	//uint32_t ulStatusRegister;
+
+	Dispatcher* dispatcher = Dispatcher::getDispatcher();
+
+	TaskHandle_t taskHandle = dispatcher->getTaskHandle(2);
+	if(taskHandle != NULL)
+	{
+		xTaskNotifyFromISR( taskHandle, 0, eSetValueWithOverwrite, &xHigherPriorityTaskWoken );
+	}
+
+	HAL_UART_DMAStop(huart);
+	uart_dma = 2;
+}
+
 /* USER CODE END 4 */
 
 /* USER CODE BEGIN Header_StartDefaultTask */
