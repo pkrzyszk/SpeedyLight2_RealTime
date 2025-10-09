@@ -216,6 +216,11 @@ void task_Serial(void *pvParameters)
 					printTaskStats();
 					break;
 				}
+				case MT_RESET_DISTANCE:
+				{
+					SerialSend("Reset distance\n\r");
+					break;
+				}
 
 
 				default:
@@ -246,8 +251,9 @@ void task_Serial_Init(uint8_t taskIndex)
 	Dispatcher->dispatcherSubscribe(MT_PRINT_TASKS_STATS, taskIndex);
 
 
-	//Dispatcher->dispatcherSubscribe(MT_MTR_CONTROL, taskIndex);
-
+	Dispatcher->dispatcherSubscribe(MT_MTR_CONTROL, taskIndex);
+	Dispatcher->dispatcherSubscribe(MT_PSU_CONTROL, taskIndex);
+	Dispatcher->dispatcherSubscribe(MT_RESET_DISTANCE, taskIndex);
 
 	/*Dispatcher->dispatcherSubscribe(MT_MTR_STATUS, taskIndex);
 
