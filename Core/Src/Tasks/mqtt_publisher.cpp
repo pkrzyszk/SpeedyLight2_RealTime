@@ -49,10 +49,10 @@ public:
 
     MqttTopicHandler() : topicID(0) {
         topics = {
-            { "pulling/1/speed/1",    1, "Speed topic received!" },
-            { "CU/1/PSU/1",           2, "UV topic received!" },
-            { "CU/1/Stats/1",         3, "Stats topic received!" },
-            { "pulling/1/distance/1", 4, "Distance topic received!" }
+            { "hw/pulling/1/speed/1",    1, "Speed topic received!" },
+            { "hw/CU/1/psu/1",           2, "UV topic received!" },
+            { "hw/CU/1/stats/1",         3, "Stats topic received!" },
+            { "hw/pulling/1/resetDistance/1", 4, "Distance topic received!" }
         };
     }
 
@@ -176,12 +176,12 @@ const char* msgTopicLookup[MT_NUM_TYPES] = { NULL };
 
 void initMsgTopicLookup(void)
 {
-    msgTopicLookup[MT_UVHEAD_PRESSURE]   = "head/1/pressure/1";
-    msgTopicLookup[MT_DISTANCE]          = "pulling/1/dist/1";
-    msgTopicLookup[MT_TEMPERATURE]       = "head/1/temp/1";
-    msgTopicLookup[MT_MODBUS_STATE]      = "CU/1/modbus/1";
-    msgTopicLookup[MT_REED_SWITCH]       = "head/1/reed/1";
-    msgTopicLookup[MT_UVHEAD_HUMIDITY]   = "head/1/humid/1";
+    msgTopicLookup[MT_UVHEAD_PRESSURE]   = "hw/head/1/pressure/1";
+    msgTopicLookup[MT_DISTANCE]          = "hw/pulling/1/distance/1";
+    msgTopicLookup[MT_TEMPERATURE]       = "hw/head/1/temperature/1";
+    msgTopicLookup[MT_MODBUS_STATE]      = "hw/CU/1/modbus/1";
+    msgTopicLookup[MT_REED_SWITCH]       = "hw/head/1/reed/1";
+    msgTopicLookup[MT_UVHEAD_HUMIDITY]   = "hw/head/1/humidity/1";
 }
 
 
@@ -207,8 +207,8 @@ void task_MQTT(void *pvParameters)
 
     ip_addr_t broker_ip;
     //IP4_ADDR(&broker_ip, 5, 196, 78, 28); // Replace with your broker IP
-    IP4_ADDR(&broker_ip, 192, 168, 101, 2); //home
-    //IP4_ADDR(&broker_ip, 10, 74, 90, 17); //work
+    //IP4_ADDR(&broker_ip, 192, 168, 101, 2); //home
+    IP4_ADDR(&broker_ip, 10, 74, 90, 17); //work
     struct mqtt_connect_client_info_t ci = {
         .client_id = "stm32_freertos_client",
         .client_user = "user",
@@ -244,7 +244,7 @@ void task_MQTT(void *pvParameters)
         //vTaskDelay(10);
         if (xQueueReceive(TaskPtr->GetQueueHandle(), &Msg, 1000))
 		{
-        	char str[20] = "err";
+        	char str[30] = "err";
         	const char *topic = msgTopicLookup[Msg.type];
 			switch (Msg.type) {
 				case MT_UVHEAD_PRESSURE:
