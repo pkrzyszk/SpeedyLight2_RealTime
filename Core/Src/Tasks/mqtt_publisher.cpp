@@ -74,23 +74,28 @@ public:
     void handleDataFragment(const uint8_t* data, uint16_t len, uint8_t flags)
     {
         printf("Received data fragment: %.*s for topic %d\n", len, data, topicID);
+        char tmp[len+1] = {0};
+        //char tmp[2500] = {0};
+
 
         Dispatcher* dispatcher = Dispatcher::getDispatcher();
 
+        memcpy(tmp, data, len);
         if (topicID == 1) {
-            float speed = std::atof(reinterpret_cast<const char*>(data));
+        	//data[len] = '\0';
+            float speed = std::atof(reinterpret_cast<const char*>(tmp));
             sMsgMotorStatus control = { MTR_MOVING, 0, 1 };
             control.speed = speed;
             dispatcher->DispatcherPostMsgByCopy(MT_MTR_CONTROL, &control, sizeof(control));
         }
         else if (topicID == 2) {
-            float value = std::atof(reinterpret_cast<const char*>(data));
+            float value = std::atof(reinterpret_cast<const char*>(tmp));
             sMsgPSUControl control = { PSU_OFF, 0 };
-            control.setting = value;
+            control.setting = value*100;
             dispatcher->DispatcherPostMsgByCopy(MT_PSU_CONTROL, &control, sizeof(control));
         }
         else if (topicID == 3) {
-            float value = std::atof(reinterpret_cast<const char*>(data)); // opcjonalne
+            float value = std::atof(reinterpret_cast<const char*>(tmp)); // opcjonalne
             int dummy;
             dispatcher->DispatcherPostMsgByCopy(MT_PRINT_TASKS_STATS, &dummy, sizeof(dummy));
         }

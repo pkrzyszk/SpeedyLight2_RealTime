@@ -1,3 +1,6 @@
 [submodule "Core/Src/Dispatcher"]
 	path = Core/Src/Dispatcher
 	url = git@github.com:Sewertronics/Dispatcher.git
+[submodule "Core/Src/STM32_drivers"]
+	path = Core/Src/STM32_drivers
+	url = https://github.com/Sewertronics/STM32_drivers.git
