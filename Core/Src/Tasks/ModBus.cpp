@@ -519,7 +519,7 @@ void task_ModBus(void *pvParameters)
 		checkPressure(Dispatcher);
 		checkTemp(Dispatcher);
 
-		vTaskDelay(500);
+		vTaskDelay(200);
 		HAL_GPIO_TogglePin(GPIOB, LD3_Pin);
 	}
 

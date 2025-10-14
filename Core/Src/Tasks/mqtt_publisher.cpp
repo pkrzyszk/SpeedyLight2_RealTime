@@ -74,13 +74,15 @@ public:
     void handleDataFragment(const uint8_t* data, uint16_t len, uint8_t flags)
     {
         printf("Received data fragment: %.*s for topic %d\n", len, data, topicID);
-        char tmp[len+1] = {0};
+        constexpr int bufferSize = 30;
+        char tmp[bufferSize] = {0};
         //char tmp[2500] = {0};
 
 
         Dispatcher* dispatcher = Dispatcher::getDispatcher();
-
-        memcpy(tmp, data, len);
+        //leave one char for null
+        int lenToCpy = len < (bufferSize-1) ? len : (bufferSize-1);
+        memcpy(tmp, data, lenToCpy);
         if (topicID == 1) {
         	//data[len] = '\0';
             float speed = std::atof(reinterpret_cast<const char*>(tmp));
